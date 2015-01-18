@@ -81,7 +81,8 @@ class SendWorkerThread(threading.Thread):
             self._apns = APNs(
                 use_sandbox=self.use_sandbox,
                 cert_file=self.cert_file,
-                key_file=self.key_file
+                key_file=self.key_file,
+                enhanced=True
             )
         return self._apns
 

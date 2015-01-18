@@ -10,7 +10,7 @@ import settings
 
 def main():
     try:
-        logging.config.fileConfig('logging.conf')
+        logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
         s = validator.validate_settings(settings)
         server = APNSProxyServer(s)
         server.start()

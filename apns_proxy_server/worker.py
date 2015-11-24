@@ -126,6 +126,9 @@ class SendWorkerThread(threading.Thread):
     def add_frame_item(self, frame, appid, token, aps, expiry=None, priority=10, test=False):
         logging.debug('Add to frame %s', token)
         logging.debug(aps)
+        if not token:
+            logging.warn('Falsy token "%s", not adding this frame', token)
+            return
 
         try:
             payload = self.create_payload(**aps)
@@ -159,9 +162,10 @@ class SendWorkerThread(threading.Thread):
         try:
             self.apns.gateway_server.send_notification_multiple(frame)
         except socket.error, e:
-            if e[0] in (errno.EPIPE, errno.EPERM):
+            if e[0] in (errno.EPIPE, errno.EPERM, errno.ECONNRESET, errno.ETIMEDOUT):
                 logging.warn('%s %s. Some frames may lost', self.name, e)
                 # BROKEN PIPE suggests some reasons
+                # mbs 11/24/2015:  I added several additional error types to retry besides pipe errors because why not
                 # (1) Connection lost by sending invalid token
                 #     Disconnected by gateway server before self.check_error() call.
                 # (2) Connection lost by too long connection

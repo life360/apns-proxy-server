@@ -9,3 +9,4 @@ pyflakes==0.7.3
 pyzmq==14.0.1
 simplejson==3.3.3
 wsgiref==0.1.2
+traceguide==1.0.23

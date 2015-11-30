@@ -190,7 +190,7 @@ class SendWorkerThread(threading.Thread):
         global _traceguide_runtime
         with _traceguide_runtime.span('SendWorkerThread.store_item') as span:
             self.recent_sended[idx] = item
-            span.infof("idx, recent_sended[idx]", set([idx, item]))
+            span.infof("idx=%d, recent_sended[idx] payload=", idx, payload=item)
             if idx > self.KEEP_SENDED_ITEMS_NUM:
                 span.warnf("recent_sended item Queue full.. dropping oldest")
                 self.recent_sended.pop(idx - self.KEEP_SENDED_ITEMS_NUM)

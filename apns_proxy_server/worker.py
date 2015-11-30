@@ -127,22 +127,34 @@ class SendWorkerThread(threading.Thread):
             self.check_error()
 
     def add_frame_item(self, frame, appid, token, aps, expiry=None, priority=10, test=False):
-        logging.debug('Add to frame %s', token)
-        logging.debug(aps)
+        global _traceguide_runtime
+        with _traceguide_runtime.span('SendWorkerThread.add_frame_item') as span:
+            span.add_join_id('end_user_id', token)
+            logging.debug('Add to frame %s', token)
+            logging.debug(aps)
+            try:
+                payload = self.create_payload(**aps)
+            except PayloadTooLargeError, pe:
+                span.warnf("payload size too large! size=%d, aps=%s", pe.payload_size, aps)
+                logging.warn('Too large payload, size:%d. %s', pe.payload_size, aps)
+                return
 
-        try:
-            payload = self.create_payload(**aps)
-        except PayloadTooLargeError, pe:
-            logging.warn('Too large payload, size:%d. %s', pe.payload_size, aps)
-            return
+            if expiry is None:
+                expiry = int(time.time()) + (60 * 60)  # 1 hour
 
-        if expiry is None:
-            expiry = int(time.time()) + (60 * 60)  # 1 hour
+            if test is True:
+                return
 
-        if test is True:
-            return
-
-        frame.add_item(token, payload, self.count, expiry, priority)
+            span.infof(
+                'token=%s, aps=%s, self.count=%d, expiry=%d, priority=%d',
+                token,
+                aps,
+                self.count,
+                expiry,
+                priority,
+                payload=payload
+            )
+            frame.add_item(token, payload, self.count, expiry, priority)
 
     def create_payload(self, alert=None, sound=None, badge=None, category=None, custom={}, content_available=False):
         if isinstance(alert, dict):
@@ -189,10 +201,17 @@ class SendWorkerThread(threading.Thread):
     def store_item(self, idx, item):
         global _traceguide_runtime
         with _traceguide_runtime.span('SendWorkerThread.store_item') as span:
+            span.add_join_id('end_user_id', item['token'])
+            span.infof("idx=%d", idx, payload=item)
             self.recent_sended[idx] = item
-            span.infof("idx=%d, recent_sended[idx] payload=", idx, payload=item)
             if idx > self.KEEP_SENDED_ITEMS_NUM:
-                span.warnf("recent_sended item Queue full.. dropping oldest")
+                span.warnf(
+                    "%d > %d, len(self.recent_sended)=%d",
+                    idx,
+                    self.KEEP_SENDED_ITEMS_NUM,
+                    len(self.recent_sended),
+                    payload=self.recent_sended[idx - self.KEEP_SENDED_ITEMS_NUM]
+                )
                 self.recent_sended.pop(idx - self.KEEP_SENDED_ITEMS_NUM)
 
     def retry_from(self, start_token_idx):

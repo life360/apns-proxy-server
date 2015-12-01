@@ -3,6 +3,7 @@
 import errno
 import logging
 import Queue
+import os
 import socket
 import ssl
 import time
@@ -13,6 +14,8 @@ from struct import unpack
 
 from apns import APNs, Payload, PayloadAlert, Frame, PayloadTooLargeError
 
+from traceguide import instrument
+_traceguide_runtime = instrument.get_runtime('life360/apns-proxy-server', os.environ.get('TRACEGUIDE_ACCESS_TOKEN'))
 
 class APNsError(Exception):
     """
@@ -184,9 +187,13 @@ class SendWorkerThread(threading.Thread):
                 self.send(frame, is_retry=True)
 
     def store_item(self, idx, item):
-        self.recent_sended[idx] = item
-        if idx > self.KEEP_SENDED_ITEMS_NUM:
-            self.recent_sended.pop(idx - self.KEEP_SENDED_ITEMS_NUM)
+        global _traceguide_runtime
+        with _traceguide_runtime.span('SendWorkerThread.store_item') as span:
+            self.recent_sended[idx] = item
+            span.infof("idx=%d, recent_sended[idx] payload=", idx, payload=item)
+            if idx > self.KEEP_SENDED_ITEMS_NUM:
+                span.warnf("recent_sended item Queue full.. dropping oldest")
+                self.recent_sended.pop(idx - self.KEEP_SENDED_ITEMS_NUM)
 
     def retry_from(self, start_token_idx):
         """

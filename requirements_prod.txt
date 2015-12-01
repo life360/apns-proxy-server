@@ -3,3 +3,4 @@ pyzmq==14.0.1
 wsgiref==0.1.2
 simplejson==3.3.3
 newrelic==2.58.1.44
+traceguide==1.0.23

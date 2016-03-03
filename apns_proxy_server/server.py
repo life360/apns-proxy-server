@@ -79,7 +79,10 @@ class APNSProxyServer(object):
         if command == COMMAND_ASK_ADDRESS:
             return str(self.port_for_pull)
         elif command == COMMAND_SEND:
-            self.dispatch_queue(message[1:])
+            if message[1:]:
+                self.dispatch_queue(message[1:])
+            else:
+                logging.warn('empty string for message')
         elif command == COMMAND_FEEDBACK:
             feedback_proxy = self.get_feedback_proxy(message[1:])
             if feedback_proxy:

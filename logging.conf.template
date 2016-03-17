@@ -13,7 +13,7 @@ handlers=file
 
 [handler_file]
 class=logging.handlers.TimedRotatingFileHandler
-args=('/var/log/app_tmp/apns_proxy_server/server.log', 'midnight', 1, 0, 'utf-8')
+args=('/dev/stdout', 'midnight', 1, 0, 'utf-8')
 level=INFO
 formatter=simple
 

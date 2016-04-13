@@ -176,7 +176,13 @@ class SendWorkerThread(threading.Thread):
         except ssl.SSLError, ssle:
             logging.warn('%s %s', self.name, ssle)
             logging.warn(traceback.format_exc())
-            if not is_retry:
+            try:
+                logging.warn('Had problems with connection to: ' + self.apns.gateway_server._socket.getpeername(), self.name)
+            except:
+                pass
+            if is_retry:
+                logging.error('Thread will die', self.name)
+            else:
                 # Retry once to prevent infinite loop
                 logging.info('%s Retry current frames', self.name)
                 self.send(frame, is_retry=True)

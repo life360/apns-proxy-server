@@ -173,6 +173,13 @@ class SendWorkerThread(threading.Thread):
     def send(self, frame, is_retry=False):
         try:
             self.apns.gateway_server.send_notification_multiple(frame)
+        except ssl.SSLError, ssle:
+            logging.warn('%s %s', self.name, ssle)
+            logging.warn(traceback.format_exc())
+            if not is_retry:
+                # Retry once to prevent infinite loop
+                logging.info('%s Retry current frames', self.name)
+                self.send(frame, is_retry=True)
         except socket.error, e:
             if e[0] in (errno.EPIPE, errno.EPERM):
                 logging.warn('%s %s. Some frames may lost', self.name, e)
@@ -190,13 +197,6 @@ class SendWorkerThread(threading.Thread):
                 logging.error('%s %s', self.name, e)
                 logging.error(traceback.format_exc())
                 raise
-        except ssl.SSLError, ssle:
-            logging.warn('%s %s', self.name, ssle)
-            logging.warn(traceback.format_exc())
-            if not is_retry:
-                # Retry once to prevent infinite loop
-                logging.info('%s Retry current frames', self.name)
-                self.send(frame, is_retry=True)
 
     def store_item(self, idx, item):
         global _traceguide_runtime
